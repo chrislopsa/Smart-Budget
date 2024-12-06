@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { Category } from 'src/categories/entities/category.entity';
 import { MonthlyRegister } from 'src/monthly-registers/entities/monthly-register.entity';
 import { Transaction } from 'src/transactions/entities/transaction.entity';
@@ -24,6 +25,7 @@ export class User {
     email: string;
 
     @Column({ type: 'varchar', nullable: false })
+    @Exclude()
     password: string;
 
     @Column({ type: 'varchar', nullable: false })

@@ -1,5 +1,5 @@
-import { HttpException, Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { RegisterUserDto } from 'src/auth/dto/register-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -12,15 +12,12 @@ export class UsersService {
     @InjectRepository(User) private readonly userRepository: Repository<User>
   ){}
 
-  async create(user: CreateUserDto) {
+  async create(user: RegisterUserDto) {
     try {
       const newUser = this.userRepository.create(user);
       return await this.userRepository.save(newUser);
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error saving user in DB ",
-        error.status || 500
-      );
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
@@ -32,10 +29,15 @@ export class UsersService {
     try {
       return await this.userRepository.findOne({ where: {id} });
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding user in BD",
-        error.status
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
+    }
+  }
+
+  async findOneByEmail(email: string) {
+    try {
+      return await this.userRepository.findOne({ where: {email} });
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 

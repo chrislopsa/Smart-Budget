@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction, TypeTransaction } from './entities/transaction.entity';
 import { Repository } from 'typeorm';
@@ -22,19 +22,17 @@ export class TransactionsService {
      private readonly categoriesService: CategoriesService,
   ){}
 
-  async create(Dto: CreateTransactionDto, monthCode: string) {
+  async create(Dto: CreateTransactionDto, userId: string, monthCode: string) {
       try {
       const newTransaction = this.transactionRepository.create({
         ...Dto,
+        user_id: userId,
         month_code: monthCode
       })
         return await this.transactionRepository.save(newTransaction)
 
       } catch (error) {
-        throw new HttpException(
-          error.message || "Error saving transaction in DB ",
-          error.status 
-        );
+        throw new InternalServerErrorException('Error interno del servidor');
       }
   }
 
@@ -51,11 +49,12 @@ export class TransactionsService {
     return `This action removes a #${id} transaction`;
   }
 
-  async handleMonthlyRegisterAndTransactions(Dto: CreateTransactionDto){
+  async handleMonthlyRegisterAndTransactions(Dto: CreateTransactionDto, userId: string){
 
     const categoryFound: Category = await this.categoriesService.findOneByIdAndUser(
       Dto.category_id,
-      Dto.user_id);
+      userId);
+      
     if(!categoryFound) throw new NotFoundException("La categoría asociada al usuario no existe");
 
     if(categoryFound.type !== Dto.type){
@@ -67,20 +66,20 @@ export class TransactionsService {
 
     //check if a monthly register already exists:
     let monthlyRegister: MonthlyRegister = await this.monthlyRegistersService.findOneByUserAndMonthCode(
-      Dto.user_id,
+      userId,
       monthCode,
     );
     
     //create a monthly register if one does not exist
     if(!monthlyRegister){
       monthlyRegister = await this.monthlyRegistersService.create(
-        Dto.user_id,
+        userId,
         monthCode,
       );
     }
 
     //create transaction
-    const newTransaction: Transaction = await this.create(Dto, monthCode)
+    const newTransaction: Transaction = await this.create(Dto, userId, monthCode)
 
     monthlyRegister = await this.monthlyRegistersService.update(
         monthlyRegister.id,

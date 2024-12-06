@@ -11,6 +11,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { MonthlyRegistersModule } from './monthly-registers/monthly-registers.module';
 import { Category } from './categories/entities/category.entity';
 import { MonthlyRegister } from './monthly-registers/entities/monthly-register.entity';
+import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,6 +31,7 @@ import { MonthlyRegister } from './monthly-registers/entities/monthly-register.e
      TransactionsModule,
      CategoriesModule,
      MonthlyRegistersModule,
+     AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
