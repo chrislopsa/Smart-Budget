@@ -18,22 +18,20 @@ export class MonthlyRegistersService {
   async create(
     userId: string,
     monthCode: string,
-    amount: number,
-    typeTransaction: TypeTransaction,
   ) {
     try {
       const newMonthlyRegister = this.monthlyRegisterRepository.create({
         user: {id: userId},
         month_code: monthCode,
-        total_incomes: typeTransaction === 'income' ? amount : 0,
-        total_expenses: typeTransaction === 'expense' ? amount : 0,
+        total_incomes: 0,
+        total_expenses: 0,
       }
       );
       return await this.monthlyRegisterRepository.save(newMonthlyRegister); 
     } catch (error) {
       throw new HttpException(
         error.message || "Error Saving Monthly Register in BD",
-        error.status || 500
+        error.status
       );
     }
   }
@@ -71,7 +69,7 @@ export class MonthlyRegistersService {
     } catch (error) {
       throw new HttpException(
         error.message || "Error founding monthly register in BD",
-        error.status || 500
+        error.status 
       )
     }
   }
@@ -87,7 +85,7 @@ export class MonthlyRegistersService {
     } catch (error) {
       throw new HttpException(
         error.message || "Error founding monthly register in BD",
-        error.status || 500
+        error.status 
       )
     }
   }

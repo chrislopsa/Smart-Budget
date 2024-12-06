@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,17 +9,23 @@ import { TypeTransaction } from 'src/transactions/entities/transaction.entity';
 @Injectable()
 export class CategoriesService {
 constructor(
-  @InjectRepository(Category) private readonly categoryRepository: Repository<Category>
+  @InjectRepository(Category)
+   private readonly categoryRepository: Repository<Category>,
 ){}
-  async create(createCategoryDto: CreateCategoryDto) {
+
+  async create(Dto: CreateCategoryDto) {
     try {
-      const newCategory = this.categoryRepository.create(createCategoryDto);
+      const categoryFound = await this.findOneByNameByTypeAndUser(
+        Dto.name,
+        Dto.type,
+        Dto.user_id);
+      if(categoryFound) throw new BadRequestException("La categoría ya existe");
+
+      const newCategory: Category = this.categoryRepository.create(Dto);
       return await this.categoryRepository.save(newCategory);
+
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error saving Category in DB ",
-        error.status || 500
-      );
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
@@ -27,25 +33,43 @@ constructor(
     try {
       return await this.categoryRepository.find();
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding Categories in DB ",
-        error.status || 404
-      );
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
-  async findOneByUser(userId: string) {
+  async findOne(id: string) {
     try {
       return await this.categoryRepository.findOne({
+        where: {id}
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno del servidor');
+    }
+  }
+
+  async findAllByUser(userId: string) {
+    try {
+      return await this.categoryRepository.find({
         where: {
           user: { id: userId }
         }, 
       });
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding category in BD",
-        error.status || 500
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
+    }
+  }
+
+  async findOneByNameByTypeAndUser(name: string, type: TypeTransaction, userId: string) {
+    try {
+      return await this.categoryRepository.findOne({
+        where: {
+          user: {id: userId},
+          name: name,
+          type: type
+        }, 
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
@@ -57,10 +81,7 @@ constructor(
         }, 
       });
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding category in BD",
-        error.status || 500
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
@@ -73,18 +94,15 @@ constructor(
         }, 
       });
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding category in BD",
-        error.status || 500
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
-  
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
-  }
 
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+  async remove(id: string){
+    const category: Category = await this.findOne(id);
+
+    if(!category) throw new NotFoundException('Categoría no encontrada')
+
+    return await this.categoryRepository.softRemove(category);
   }
 }
