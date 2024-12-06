@@ -31,11 +31,10 @@ export class UsersService {
   async findOne(id: string) {
     try {
       return await this.userRepository.findOne({ where: {id} });
-      
     } catch (error) {
       throw new HttpException(
         error.message || "Error founding user in BD",
-        error.status || 500
+        error.status
       )
     }
   }

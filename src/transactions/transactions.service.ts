@@ -9,8 +9,6 @@ import timezone from 'dayjs/plugin/timezone';
 import { MonthlyRegistersService } from 'src/monthly-registers/monthly-registers.service';
 import { MonthlyRegister } from 'src/monthly-registers/entities/monthly-register.entity';
 import { CategoriesService } from 'src/categories/categories.service';
-import { UsersService } from 'src/users/users.service';
-import { User } from 'src/users/entities/user.entity';
 import { Category } from 'src/categories/entities/category.entity';
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -22,7 +20,6 @@ export class TransactionsService {
      private readonly transactionRepository: Repository<Transaction>,
      private readonly monthlyRegistersService: MonthlyRegistersService,
      private readonly categoriesService: CategoriesService,
-     private readonly usersService: UsersService,
   ){}
 
   async create(Dto: CreateTransactionDto, monthCode: string) {
@@ -35,8 +32,8 @@ export class TransactionsService {
 
       } catch (error) {
         throw new HttpException(
-          error.message || "Error saving transation in DB ",
-          error.status || 500
+          error.message || "Error saving transaction in DB ",
+          error.status 
         );
       }
   }
@@ -55,9 +52,6 @@ export class TransactionsService {
   }
 
   async handleMonthlyRegisterAndTransactions(Dto: CreateTransactionDto){
-    
-    const userFound: User = await this.usersService.findOne(Dto.user_id);
-    if(!userFound) throw new NotFoundException("El usuario no existe");
 
     const categoryFound: Category = await this.categoriesService.findOneByIdAndUser(
       Dto.category_id,
@@ -72,31 +66,28 @@ export class TransactionsService {
     const monthCode = currentDate.format('YYYY-MM');
 
     //check if a monthly register already exists:
-    let monthlyRegister: MonthlyRegister | string = await this.monthlyRegistersService.findOneByUserAndMonthCode(
+    let monthlyRegister: MonthlyRegister = await this.monthlyRegistersService.findOneByUserAndMonthCode(
       Dto.user_id,
       monthCode,
-    )
+    );
     
     //create a monthly register if one does not exist
     if(!monthlyRegister){
       monthlyRegister = await this.monthlyRegistersService.create(
         Dto.user_id,
         monthCode,
-        Dto.amount,
-        Dto.type,
       );
     }
 
-    if(monthlyRegister){
-      const newTransaction: Transaction = await this.create(Dto, monthCode)
+    //create transaction
+    const newTransaction: Transaction = await this.create(Dto, monthCode)
 
-      if(newTransaction){
-        return await this.monthlyRegistersService.update(
-          monthlyRegister.id,
-          Dto.amount,
-          Dto.type,
-        )
-      }
-    }
+    monthlyRegister = await this.monthlyRegistersService.update(
+        monthlyRegister.id,
+        Dto.amount,
+        Dto.type,
+      );
+
+      return {newTransaction, monthlyRegister}
   }
 }
