@@ -1,30 +1,22 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { MonthlyRegistersService } from './monthly-registers.service';
-import { CreateMonthlyRegisterDto } from './dto/create-monthly-register.dto';
-import { UpdateMonthlyRegisterDto } from './dto/update-monthly-register.dto';
+
 
 @Controller('monthly-registers')
 export class MonthlyRegistersController {
   constructor(private readonly monthlyRegistersService: MonthlyRegistersService) {}
 
-  @Post()
-  create(@Body() createMonthlyRegisterDto: CreateMonthlyRegisterDto) {
-    //return this.monthlyRegistersService.create(createMonthlyRegisterDto);
+
+  @Get(':userId')
+  async findAllByUser(@Param('userId') userId: string){
+    return await this.monthlyRegistersService.findAllByUser(userId);
   }
 
-  @Get()
-  findAll() {
-    return this.monthlyRegistersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    //return this.monthlyRegistersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMonthlyRegisterDto: UpdateMonthlyRegisterDto) {
-    //return this.monthlyRegistersService.update(+id, updateMonthlyRegisterDto);
+  @Get(':userId/:monthCode')
+  async findOneByUserAndMonthCode(
+    @Param('userId') userId: string, 
+    @Param('monthCode') monthCode: string) {
+    return await this.monthlyRegistersService.findOneByUserAndMonthCode(userId, monthCode);
   }
 
   @Delete(':id')

@@ -1,10 +1,9 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateMonthlyRegisterDto } from './dto/create-monthly-register.dto';
-import { UpdateMonthlyRegisterDto } from './dto/update-monthly-register.dto';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MonthlyRegister } from './entities/monthly-register.entity';
 import { Repository } from 'typeorm';
 import { TypeTransaction } from 'src/transactions/entities/transaction.entity';
+
 
 @Injectable()
 export class MonthlyRegistersService {
@@ -29,10 +28,7 @@ export class MonthlyRegistersService {
       );
       return await this.monthlyRegisterRepository.save(newMonthlyRegister); 
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error Saving Monthly Register in BD",
-        error.status
-      );
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
@@ -48,15 +44,27 @@ export class MonthlyRegistersService {
 
       return await this.monthlyRegisterRepository.save(monthlyRegister);
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error Updating Monthly Register in BD",
-        error.status || 500
-      );
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
-  findAll() {
-    return `This action returns all monthlyRegisters`;
+  async findAllByUser(userId: string) {
+    try {     
+      const monthlyRegisters: MonthlyRegister[] = await this.monthlyRegisterRepository.find({
+        where: {
+          user: {id: userId}
+        }
+        })      
+        if(!monthlyRegisters) throw new NotFoundException("Monthly register not found");
+        return monthlyRegisters.map(register => ({
+          month_code: register.month_code,
+          total_incomes: register.total_incomes,
+          total_expenses: register.total_expenses
+        }));
+
+    } catch (error) {
+      throw new InternalServerErrorException('Error interno del servidor');
+    }
   }
 
   async findOne(id: string) {
@@ -67,31 +75,26 @@ export class MonthlyRegistersService {
         return monthlyRegister;
 
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding monthly register in BD",
-        error.status 
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
   async findOneByUserAndMonthCode(userId: string, monthCode: string) {
     try {
-      return await this.monthlyRegisterRepository.findOne({
+      const register = await this.monthlyRegisterRepository.findOne({
         where: {
           user: { id: userId },
           month_code: monthCode,
         },
       });
+      if(!register) throw new NotFoundException("Monthly register not found");
+      return register;
     } catch (error) {
-      throw new HttpException(
-        error.message || "Error founding monthly register in BD",
-        error.status 
-      )
+      throw new InternalServerErrorException('Error interno del servidor');
     }
   }
 
   remove(id: number) {
     return `This action removes a #${id} monthlyRegister`;
   }
-
 }
