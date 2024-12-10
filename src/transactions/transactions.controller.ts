@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
-import { UserExistsGuard } from 'src/common/guards/user-exists.guard';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { GetUser } from 'src/common/decorators/user.decorator';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { User } from 'src/users/entities/user.entity';
 
 
@@ -15,21 +14,21 @@ export class TransactionsController {
    a handler method to determine if a monthly record already exists and create it if it does not. */
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() Dto: CreateTransactionDto, @GetUser() user: User) {
-    console.log(user);
-    return this.transactionsService.handleMonthlyRegisterAndTransactions(Dto, user.id)
+  async create(
+    @Body() Dto: CreateTransactionDto,
+    @GetUser() user: User) {
+    return await this.transactionsService.handleMonthlyRegisterAndTransactions(Dto, user.id);
   }
 
-  @Get()
-  findAll() {
-    return this.transactionsService.findAll();
+  @UseGuards(JwtAuthGuard)
+  @Get(':monthCode')
+  async findAllByUserAndMonthCode(
+    @Param('monthCode') monthCode: string,
+    @GetUser() user: User) {
+    return await this.transactionsService.findAllByUserAndMonthCode(monthCode, user.id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.transactionsService.findOne(+id);
-  }
-
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.transactionsService.remove(+id);

@@ -1,6 +1,5 @@
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
 import { Repository } from 'typeorm';
@@ -13,15 +12,19 @@ constructor(
    private readonly categoryRepository: Repository<Category>,
 ){}
 
-  async create(Dto: CreateCategoryDto) {
+  async create(createCategoryDto: CreateCategoryDto, userId: string) {
     try {
+      const {name, type} = createCategoryDto;
       const categoryFound = await this.findOneByNameByTypeAndUser(
-        Dto.name,
-        Dto.type,
-        Dto.user_id);
+        name,
+        type,
+        userId);
       if(categoryFound) throw new BadRequestException("La categoría ya existe");
 
-      const newCategory: Category = this.categoryRepository.create(Dto);
+      const newCategory: Category = this.categoryRepository.create({
+        ...createCategoryDto,
+        user_id: userId
+      });
       return await this.categoryRepository.save(newCategory);
 
     } catch (error) {
@@ -47,13 +50,15 @@ constructor(
     }
   }
 
-  async findAllByUser(userId: string) {
+  async findAllByUserAndType(userId: string, type: TypeTransaction) {
     try {
-      return await this.categoryRepository.find({
+      const categories = await this.categoryRepository.find({
         where: {
-          user: { id: userId }
+          user: { id: userId },
+          type: type
         }, 
       });
+      return categories;
     } catch (error) {
       throw new InternalServerErrorException('Error interno del servidor');
     }
