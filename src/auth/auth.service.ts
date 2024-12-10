@@ -45,16 +45,18 @@ export class AuthService {
     }
 
     async login(loginUserDto: LoginUserDto) {
-        try {
-            const { email, password } = loginUserDto;
-            const userFound = await this.userService.findOneByEmail(email);
-
+        
+        const { email, password } = loginUserDto;
+        const userFound = await this.userService.findOneByEmail(email);
+        console.log('userFound:',userFound);
+            
         if (!userFound) {
             throw new UnauthorizedException('Credenciales inválidas');
         }
 
         const isPasswordValid = await bcrypt.compare(password, userFound.password);
-
+        console.log('isPasswordValid:',isPasswordValid);
+        
         if (!isPasswordValid) {
             throw new UnauthorizedException('Credenciales inválidas');
         }
@@ -70,11 +72,5 @@ export class AuthService {
                 name: userFound.username
             }
         };
-
-        } catch (error) {
-            console.log(error);
-            
-            throw new InternalServerErrorException('Error interno del servidor en login');
-        }
     }
 }

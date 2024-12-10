@@ -87,8 +87,8 @@ export class MonthlyRegistersService {
           month_code: monthCode,
         },
       });
-      if(!register) throw new NotFoundException("Monthly register not found");
       return register;
+
     } catch (error) {
       throw new InternalServerErrorException('Error interno del servidor');
     }

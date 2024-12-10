@@ -10,6 +10,7 @@ import { MonthlyRegistersService } from 'src/monthly-registers/monthly-registers
 import { MonthlyRegister } from 'src/monthly-registers/entities/monthly-register.entity';
 import { CategoriesService } from 'src/categories/categories.service';
 import { Category } from 'src/categories/entities/category.entity';
+import { User } from 'src/users/entities/user.entity';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -17,33 +18,35 @@ dayjs.extend(timezone);
 export class TransactionsService {
   constructor(
     @InjectRepository(Transaction)
-     private readonly transactionRepository: Repository<Transaction>,
+     private readonly transactionsRepository: Repository<Transaction>,
      private readonly monthlyRegistersService: MonthlyRegistersService,
      private readonly categoriesService: CategoriesService,
   ){}
 
   async create(Dto: CreateTransactionDto, userId: string, monthCode: string) {
       try {
-      const newTransaction = this.transactionRepository.create({
+      const newTransaction = this.transactionsRepository.create({
         ...Dto,
         user_id: userId,
         month_code: monthCode
       })
-        return await this.transactionRepository.save(newTransaction)
+        return await this.transactionsRepository.save(newTransaction)
 
       } catch (error) {
-        throw new InternalServerErrorException('Error interno del servidor');
+        throw new InternalServerErrorException('Error interno del servidor en create');
       }
   }
 
-  findAll() {
-    return `This action returns all transactions`;
+  async findAllByUserAndMonthCode(month_code: string, userId: string) {
+    const transactions = await this.transactionsRepository.find({
+      where:{
+        user: {id: userId},
+        month_code: month_code
+      }
+    });
+    if(!transactions) throw new NotFoundException('Transacciones no encontradas');
+    return transactions;
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} transaction`;
-  }
-
 
   remove(id: number) {
     return `This action removes a #${id} transaction`;
@@ -63,12 +66,9 @@ export class TransactionsService {
 
     const currentDate = dayjs().utc().startOf('day');
     const monthCode = currentDate.format('YYYY-MM');
-
+ 
     //check if a monthly register already exists:
-    let monthlyRegister: MonthlyRegister = await this.monthlyRegistersService.findOneByUserAndMonthCode(
-      userId,
-      monthCode,
-    );
+    let monthlyRegister = await this.monthlyRegistersService.findOneByUserAndMonthCode(userId, monthCode);
     
     //create a monthly register if one does not exist
     if(!monthlyRegister){
