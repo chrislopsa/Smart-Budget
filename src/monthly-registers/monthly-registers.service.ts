@@ -17,7 +17,7 @@ export class MonthlyRegistersService {
   async create(
     userId: string,
     monthCode: string,
-  ) {
+  ): Promise<MonthlyRegister> {
     try {
       const newMonthlyRegister = this.monthlyRegisterRepository.create({
         user: {id: userId},
@@ -34,7 +34,11 @@ export class MonthlyRegistersService {
 
   /**method to update the values of the fields 'total_incomes' and 'total_expenses',
    *  from the creation, update or deletion of a transaction by the user. */
-  async update(id: string, amount: number, typeTransaction: TypeTransaction) {
+  async update(
+    id: string,
+    amount: number,
+    typeTransaction: TypeTransaction
+    ): Promise<MonthlyRegister> {
     try {
       const monthlyRegister: MonthlyRegister = await this.findOne(id);
 
@@ -48,7 +52,9 @@ export class MonthlyRegistersService {
     }
   }
 
-  async findAllByUser(userId: string) {
+  async findAllByUser(userId: string)
+  : Promise<{ month_code: string; total_incomes: number; total_expenses: number }[]
+  > {
     try {     
       const monthlyRegisters: MonthlyRegister[] = await this.monthlyRegisterRepository.find({
         where: {
@@ -67,7 +73,7 @@ export class MonthlyRegistersService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<MonthlyRegister> {
     try {
       const monthlyRegister: MonthlyRegister = await this.monthlyRegisterRepository.findOne({where: {id}});
 
@@ -79,7 +85,7 @@ export class MonthlyRegistersService {
     }
   }
 
-  async findOneByUserAndMonthCode(userId: string, monthCode: string) {
+  async findOneByUserAndMonthCode(userId: string, monthCode: string): Promise<MonthlyRegister> {
     try {
       const register = await this.monthlyRegisterRepository.findOne({
         where: {

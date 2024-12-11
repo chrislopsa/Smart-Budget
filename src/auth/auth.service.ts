@@ -5,6 +5,7 @@ import { User } from 'src/users/entities/user.entity';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login.dto';
 import { UsersService } from 'src/users/users.service';
+import { LoginResponse } from './dto/login-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -17,11 +18,10 @@ export class AuthService {
         try {
             const { email, password, username, phone } = registerUserDto;
 
-       
-            const userFound = await this.userService.findOneByEmail(email);
+            const existingUser = await this.userService.findOneByEmail(email);
     
-            if (userFound) {
-                throw new ConflictException('El usuario ya existe');
+            if (existingUser) {
+                throw new ConflictException('Email already registered');
             }
             
             const salt = await bcrypt.genSalt(10);
@@ -39,38 +39,38 @@ export class AuthService {
             return user;
 
         } catch (error) {
-            throw new InternalServerErrorException('Error interno del servidor');
+            if(error instanceof ConflictException) throw new ConflictException(error.message);
+
+            throw new InternalServerErrorException('Internal server error');
         }
        
     }
 
-    async login(loginUserDto: LoginUserDto) {
-        
-        const { email, password } = loginUserDto;
-        const userFound = await this.userService.findOneByEmail(email);
-        console.log('userFound:',userFound);
+    async login(loginUserDto: LoginUserDto): Promise<LoginResponse> {
+        try {
+            const { email, password } = loginUserDto;
+            const userFound = await this.userService.findOneByEmail(email);
+                
+            if (!userFound)  throw new UnauthorizedException('Invalid credentials');
+    
+            const isPasswordValid = await bcrypt.compare(password, userFound.password);
             
-        if (!userFound) {
-            throw new UnauthorizedException('Credenciales inválidas');
-        }
+            if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
+            
+            const payload = {userId: userFound.id};
+            const token = await this.jwtService.signAsync(payload)
+    
+            return {
+                access_token: token,
+                user: {
+                    id: userFound.id,
+                }
+            };
 
-        const isPasswordValid = await bcrypt.compare(password, userFound.password);
-        console.log('isPasswordValid:',isPasswordValid);
-        
-        if (!isPasswordValid) {
-            throw new UnauthorizedException('Credenciales inválidas');
-        }
-       
-        const payload = {userId: userFound.id};
-        const token = await this.jwtService.signAsync(payload)
+        } catch (error) {
+            if(error instanceof UnauthorizedException) throw new UnauthorizedException(error.message);
 
-        return {
-            access_token: token,
-            user: {
-                id: userFound.id,
-                email: userFound.email,
-                name: userFound.username
-            }
-        };
+            throw new InternalServerErrorException('Internal server error');
+        }
     }
 }
