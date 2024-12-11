@@ -16,7 +16,7 @@ export class CreateTransactionDto {
 
     @IsNotEmpty()
     @IsNumber()
-    @Min(0)
+    @Min(1)
     amount: number;
 }
 

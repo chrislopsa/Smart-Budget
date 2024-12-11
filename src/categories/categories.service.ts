@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConflictException,
+          Injectable,
+          InternalServerErrorException,
+          NotFoundException, 
+          UnauthorizedException} from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
@@ -12,14 +16,18 @@ constructor(
    private readonly categoryRepository: Repository<Category>,
 ){}
 
-  async create(createCategoryDto: CreateCategoryDto, userId: string) {
+  async create(createCategoryDto: CreateCategoryDto, userId: string): Promise<Category> {
     try {
       const {name, type} = createCategoryDto;
-      const categoryFound = await this.findOneByNameByTypeAndUser(
-        name,
-        type,
-        userId);
-      if(categoryFound) throw new BadRequestException("La categoría ya existe");
+
+      const existingCategory: Category = await this.categoryRepository.findOne({
+        where: {
+          user: {id: userId},
+          name: name,
+          type: type
+        }, 
+      });
+      if(existingCategory) throw new ConflictException("The category already exists");
 
       const newCategory: Category = this.categoryRepository.create({
         ...createCategoryDto,
@@ -28,65 +36,42 @@ constructor(
       return await this.categoryRepository.save(newCategory);
 
     } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
+      if(error instanceof ConflictException) throw new ConflictException(error.message);
+
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async findAll() {
+  async findOne(id: string): Promise<Category> {
     try {
-      return await this.categoryRepository.find();
-    } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
-    }
-  }
-
-  async findOne(id: string) {
-    try {
-      return await this.categoryRepository.findOne({
+      const category: Category = await this.categoryRepository.findOne({
         where: {id}
       });
+      if(!category) throw new NotFoundException('Category not found');
+      return category;
+
     } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
+      if(error instanceof NotFoundException) throw new NotFoundException(error.message);
+
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async findAllByUserAndType(userId: string, type: TypeTransaction) {
+  async findAllByUserAndType(userId: string, type: TypeTransaction): Promise<Category[]> {
     try {
-      const categories = await this.categoryRepository.find({
+      const categories: Category[] = await this.categoryRepository.find({
         where: {
           user: { id: userId },
           type: type
         }, 
       });
+      if(categories.length === 0) throw new NotFoundException(`User has no ${type} type categories`);
       return categories;
-    } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
-    }
-  }
 
-  async findOneByNameByTypeAndUser(name: string, type: TypeTransaction, userId: string) {
-    try {
-      return await this.categoryRepository.findOne({
-        where: {
-          user: {id: userId},
-          name: name,
-          type: type
-        }, 
-      });
     } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
-    }
-  }
+      if(error instanceof NotFoundException) throw new NotFoundException(error.message);
 
-  async findOneByType(type: TypeTransaction) {
-    try {
-      return await this.categoryRepository.findOne({
-        where: {
-          type: type
-        }, 
-      });
-    } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
@@ -99,15 +84,21 @@ constructor(
         }, 
       });
     } catch (error) {
-      throw new InternalServerErrorException('Error interno del servidor');
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async remove(id: string){
-    const category: Category = await this.findOne(id);
+  async remove(id: string, userId: string): Promise<Category>{
+    try {
+      const category: Category = await this.findOneByIdAndUser(id, userId);
 
-    if(!category) throw new NotFoundException('Categoría no encontrada')
+      if(!category) throw new UnauthorizedException('Unauthorized');
 
-    return await this.categoryRepository.softRemove(category);
+      return await this.categoryRepository.softRemove(category);
+    } catch (error) {
+      if(error instanceof UnauthorizedException) throw new UnauthorizedException(error.message);
+
+      throw new InternalServerErrorException('Internal server error');
+    }
   }
 }
