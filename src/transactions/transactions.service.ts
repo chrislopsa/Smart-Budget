@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction, TypeTransaction } from './entities/transaction.entity';
 import { Repository } from 'typeorm';
@@ -123,7 +123,7 @@ export class TransactionsService {
           amount,
           type
         );
-        return {newTransaction, monthlyRegister}
+        return newTransaction;
 
     } catch (error) {
       if(error instanceof NotFoundException) throw new NotFoundException(error.message);
@@ -156,12 +156,13 @@ export class TransactionsService {
       
       if(!transactionFound) throw new UnauthorizedException('Unauthorized');
     
+      /*if the amount of the transaction will be updated, 
+        update also  the monthly register*/
       if(updatetransactionDto.amount) {
         const newAmount: number = updatetransactionDto.amount;
         const oldAmount: number = transactionFound.amount;
         const amountDifference: number =  newAmount - oldAmount;
-        
-        //find the corresponding monthly register to update it.
+
         const { month_code, type } = transactionFound;
         let monthlyRegister: MonthlyRegister = await this.monthlyRegistersService.findOneByUserAndMonthCode(
           userId,
@@ -169,7 +170,6 @@ export class TransactionsService {
         );
        
         if(monthlyRegister) {
-
           monthlyRegister = await this.monthlyRegistersService.update(
             monthlyRegister.id,
             amountDifference,
@@ -177,6 +177,7 @@ export class TransactionsService {
           );
         }
       }
+      //update transaction
       let transactionUpdated = Object.assign(transactionFound, updatetransactionDto);
       transactionUpdated = await this.transactionsRepository.save(transactionUpdated);
       return transactionUpdated;
